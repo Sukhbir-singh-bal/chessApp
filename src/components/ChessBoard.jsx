@@ -27,7 +27,9 @@ const initialBoardSetup = [
 
 const ChessBoard = () => {
   const [board, setBoard] = useState(initialBoardSetup);
-
+  const [move,setmove] = useState("white");
+  const [blackWins , SetBlackWins] = useState([]);
+  const [whiteWins , SetWhiteWins] = useState([]);
   const getPieceImage = (piece) => {
     switch (piece) {
       case 'r': return rookB;
@@ -52,14 +54,21 @@ const ChessBoard = () => {
     const blackPieces = ['r', 'n', 'b', 'q', 'k', 'b', 'p'];
     const whitePieces = ['R', 'N', 'B', 'Q', 'K', 'B', 'P'];
     const newBoard = board.map(row => row.slice());
-    if(blackPieces.includes(newBoard[toX][toY]) && blackPieces.includes(piece) || whitePieces.includes(newBoard[toX][toY]) && whitePieces.includes(piece)){
-      console.log("Invalid Move");
-    }else{
-      newBoard[fromX][fromY] = '';
-      newBoard[toX][toY] = piece;
-      setBoard(newBoard);
-    }
-    
+    if(isInvalidMove(piece,toX,toY,fromX,fromY,board))return;
+    if(blackPieces.includes(newBoard[toX][toY]) && blackPieces.includes(piece) || whitePieces.includes(newBoard[toX][toY]) && whitePieces.includes(piece))return;
+      if(blackPieces.includes(piece) && move=="black" || whitePieces.includes(piece) && move=="white"){
+        if(move == "black" &&  whitePieces.includes(newBoard[toX][toY])){
+            SetBlackWins([...blackWins,newBoard[toX][toY]])
+        }
+        if(move == "white" &&  blackPieces.includes(newBoard[toX][toY])){
+          SetWhiteWins([...whiteWins, newBoard[toX][toY]]);
+        }
+        newBoard[fromX][fromY] = '';
+        newBoard[toX][toY] = piece;
+        setBoard(newBoard);    
+        setmove(blackPieces.includes(piece) ? "white" : "black")
+      }
+      
   };
 
   const renderSquare = (i, j, piece) => {
@@ -82,10 +91,98 @@ const ChessBoard = () => {
     return squares;
   };
 
+  const isInvalidMove = (piece, toX, toY, fromX, fromY, board) => {
+    const dx = Math.abs(toX - fromX);
+    const dy = Math.abs(toY - fromY);
+    const directionX = toX > fromX ? 1 : -1;
+    const directionY = toY > fromY ? 1 : -1;
+  
+    const checkPath = (startX, startY, endX, endY, isDiagonal) => {
+      let x = startX;
+      let y = startY;
+  
+      while (true) {
+        if (isDiagonal) {
+          x += directionX;
+          y += directionY;
+        } else {
+          if (x !== endX) x += directionX;
+          if (y !== endY) y += directionY;
+        }
+        if (x === endX && y === endY) break;
+        if (board[x][y] !== '') {
+          return true; // Path is blocked
+        }
+      }
+      return false;
+    };
+  
+    switch (piece.toLowerCase()) {
+      case 'p':
+        if (piece === 'p') { // Black pawn
+          if (fromX === 1 && toX === fromX + 2 && toY === fromY) {
+            return checkPath(fromX, fromY, toX, toY, false);
+          }
+          if (toX === fromX + 1 && toY === fromY && board[toX][toY] === '') return false;
+          if (toX === fromX + 1 && Math.abs(toY - fromY) === 1 && board[toX][toY] !== '') return false;
+        } else { // White pawn
+          if (fromX === 6 && toX === fromX - 2 && toY === fromY) {
+            return checkPath(fromX, fromY, toX, toY, false);
+          }
+          if (toX === fromX - 1 && toY === fromY && board[toX][toY] === '') return false;
+          if (toX === fromX - 1 && Math.abs(toY - fromY) === 1 && board[toX][toY] !== '') return false;
+        }
+        return true;
+      case 'r':
+        if (dx !== 0 && dy !== 0) return true; // Invalid move if not in a straight line
+        return checkPath(fromX, fromY, toX, toY, false);
+      case 'n':
+        return !(dx === 2 && dy === 1 || dx === 1 && dy === 2);
+      case 'b':
+        if (dx !== dy) return true; // Invalid move if not diagonal
+        return checkPath(fromX, fromY, toX, toY, true);
+      case 'q':
+        if (dx === dy) return checkPath(fromX, fromY, toX, toY, true);
+        if (dx === 0 || dy === 0) return checkPath(fromX, fromY, toX, toY, false);
+        return true; // Invalid move if not straight line or diagonal
+      case 'k':
+        return dx > 1 || dy > 1;
+      default:
+        return true;
+    }
+  };
+  
+  
+  
   return (
+    <div className='flex justify-center align-top'>
+    <h2 className=''>{move}</h2>
     <div className="grid grid-cols-8 gap-0">
       {renderBoard()}
     </div>
+    <div className="flex flex-col justify-between">
+      <div className="p-2 w-100">
+        Black Wins
+        <div className="flex flex-wrap">
+        {blackWins.map((item,index)=>(
+                <div key={index}><img className='w-10 h-10' src={getPieceImage(item)} alt="item"  /></div>
+        ))}
+        </div>
+      </div>
+      <div className="p-2 w-100">
+        White Wins
+        <div className="flex flex-wrap">
+        {
+          whiteWins.map((item, index) => (
+            <div key={index}><img className='w-10 h-10' src={getPieceImage(item)} alt="item"  /></div>
+          ))
+        }
+        </div>
+    
+      </div>
+    </div>
+    </div>
+    
   );
 };
 
